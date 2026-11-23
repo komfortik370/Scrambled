@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrambled — Мультфильм и Кубик Рубика</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #1a1e26; color: #e8e8e8; line-height: 1.6;
+    }
+    header {
+        text-align: center; padding: 2.5rem 1rem 1.5rem;
+        background: linear-gradient(135deg, #0f141c, #1e3a4f);
+        border-bottom: 3px solid #e8a838;
+    }
+    header h1 { font-size: 2.8rem; letter-spacing: 2px; margin-bottom: 0.3rem; }
+    header p { color: #b0b8c4; font-size: 1.1rem; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .film-section {
+        background: #232a35; border-radius: 12px; padding: 1.8rem 2rem;
+        margin-bottom: 2.5rem; border: 1px solid #3a4454;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    .film-section h2 { color: #e8a838; margin-bottom: 0.8rem; font-size: 1.5rem; }
+    .film-section h3 { color: #c0d0e0; margin: 1.2rem 0 0.5rem; font-size: 1.15rem; }
+    .film-desc { color: #c0c8d4; margin-bottom: 1.2rem; font-size: 0.98rem; }
+
+    /* Встроенный плеер VK Видео */
+    .video-embed {
+        position: relative; width: 100%; padding-bottom: 56.25%; /* 16:9 */
+        background: #0d1117; border-radius: 10px; overflow: hidden;
+        margin: 1.2rem 0; border: 1px solid #3a4454;
+    }
+    .video-embed iframe {
+        position: absolute; top: 0; left: 0;
+        width: 100%; height: 100%; border: 0;
+    }
+
+    .film-links { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: center; margin-top: 1rem; }
+    .film-links a {
+        display: inline-block; background: #e8a838; color: #1a1e26;
+        text-decoration: none; padding: 0.7rem 1.6rem; border-radius: 6px;
+        font-weight: 600; transition: background 0.2s, transform 0.1s;
+    }
+    .film-links a:hover { background: #f0c05a; transform: translateY(-2px); }
+    .film-links a.secondary { background: #3a4a5c; color: #e8e8e8; }
+    .film-links a.secondary:hover { background: #4d6078; }
+
+    .author-block {
+        background: #1b2029; border-left: 4px solid #e8a838;
+        border-radius: 0 8px 8px 0; padding: 1.2rem 1.5rem;
+        margin: 1.2rem 0; color: #d0d8e4; font-size: 0.95rem;
+    }
+    .author-block p { margin-bottom: 0.8rem; }
+    .author-block p:last-child { margin-bottom: 0; }
+    .author-quote {
+        font-style: italic; color: #b8c8d8;
+        border-left: 3px solid #5a7a9a; padding-left: 1rem; margin: 1rem 0;
+    }
+    .author-quote .who { display: block; font-style: normal; color: #8a9aaa; font-size: 0.85rem; margin-top: 0.3rem; }
+
+    .game-section {
+        background: #232a35; border-radius: 12px; padding: 1.8rem 2rem;
+        border: 1px solid #3a4454; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    .game-section h2 { color: #e8a838; margin-bottom: 0.5rem; font-size: 1.5rem; }
+    .game-section .subtitle { color: #a0a8b8; margin-bottom: 1.5rem; font-size: 0.95rem; }
+
+    /* 3D-Сцена */
+    .scene {
+        width: 100%; min-height: 420px; display: flex;
+        justify-content: center; align-items: center;
+        perspective: 1500px; margin-bottom: 1.5rem;
+        background: radial-gradient(circle at center, #242d3a 0%, #1b2029 100%);
+        border-radius: 10px; padding: 2rem 0;
+        cursor: grab; user-select: none; overflow: hidden;
+        position: relative;
+    }
+    .scene:active { cursor: grabbing; }
+
+    #orbit {
+        width: 0; height: 0; position: relative;
+        transform-style: preserve-3d;
+        transform: rotateX(-25deg) rotateY(-35deg);
+        transition: transform 0.1s linear;
+    }
+
+    .cubie {
+        position: absolute; width: 60px; height: 60px;
+        transform-style: preserve-3d;
+        /* Плавный переход для позиционирования, если понадобится */
+        transition: transform 0.15s ease-out;
+    }
+    
+    .sticker {
+        position: absolute; width: 60px; height: 60px;
+        border-radius: 5px; border: 2px solid #0a0a0a;
+        backface-visibility: hidden;
+        box-shadow: inset 0 0 8px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.2);
+        background-clip: padding-box;
+    }
+    .sticker.U { transform: rotateX(90deg)  translateZ(30px); }
+    .sticker.D { transform: rotateX(-90deg) translateZ(30px); }
+    .sticker.F { transform: translateZ(30px); }
+    .sticker.B { transform: rotateY(180deg) translateZ(30px); }
+    .sticker.R { transform: rotateY(90deg)  translateZ(30px); }
+    .sticker.L { transform: rotateY(-90deg) translateZ(30px); }
+
+    .c-U { background: linear-gradient(135deg, #ffffff, #dcdcdc); }
+    .c-D { background: linear-gradient(135deg, #ffea00, #d4b000); }
+    .c-F { background: linear-gradient(135deg, #00d175, #007a45); }
+    .c-B { background: linear-gradient(135deg, #0077ff, #003d99); }
+    .c-R { background: linear-gradient(135deg, #ff3344, #a30011); }
+    .c-L { background: linear-gradient(135deg, #ff8800, #b35900); }
+
+    /* Контейнер для анимируемого слоя */
+    #turn-group {
+        position: absolute; width: 0; height: 0;
+        transform-style: preserve-3d;
+        /* Плавная анимация с инерцией */
+        transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 1rem; }
+    .controls button {
+        background: #2e3a48; color: #e0e0e0; border: 1px solid #4a5a6c;
+        padding: 0.55rem 1rem; border-radius: 6px; cursor: pointer;
+        font-weight: 700; font-size: 0.95rem; min-width: 58px;
+        transition: background 0.15s, border-color 0.15s, opacity 0.2s, transform 0.1s;
+    }
+    .controls button:hover:not(:disabled) { background: #3e4e60; border-color: #e8a838; transform: translateY(-1px); }
+    .controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .controls button.action { background: #e8a838; color: #1a1e26; border-color: #e8a838; }
+    .controls button.action:hover:not(:disabled) { background: #f0c05a; }
+    .controls button.solve { background: #2f8f4e; color: #fff; border-color: #2f8f4e; box-shadow: 0 0 10px rgba(47, 143, 78, 0.4); }
+    .controls button.solve:hover:not(:disabled) { background: #38a85d; box-shadow: 0 0 15px rgba(56, 168, 93, 0.6); }
+
+    .status {
+        text-align: center; margin-top: 0.8rem; font-weight: 600;
+        min-height: 1.4em; color: #7ac87a; transition: color 0.3s;
+    }
+    .status.warn { color: #e8a838; }
+    .hint { text-align: center; color: #6a7a8a; font-size: 0.85rem; margin-top: 0.5rem; }
+
+    footer {
+        text-align: center; padding: 2rem 1rem; color: #5a6a7a;
+        font-size: 0.85rem; border-top: 1px solid #2a3440; margin-top: 2rem;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>SCRAMBLED</h1>
+    <p>Живой кубик Рубика, который хочет, чтобы его собрали</p>
+</header>
+
+<div class="container">
+
+    <!-- === ФИЛЬМ === -->
+    <section class="film-section">
+        <h2>🎬 Мультфильм «Scrambled» (2017)</h2>
+        <p class="film-desc">
+            Короткометражный анимационный фильм от голландской студии <strong>Polder Animation</strong>,
+            режиссёр — <strong>Бастиан Схраведел</strong>. История о девушке Эсре, которая опаздывает
+            на поезд и встречает живой кубик Рубика, отчаянно желающий, чтобы его собрали.
+        </p>
+
+        <!-- ВСТРОЕННЫЙ ПЛЕЕР VK ВИДЕО -->
+        <div class="video-embed">
+            <iframe 
+                src="https://vkvideo.ru/video_ext.php?oid=-119098218&id=456239079" 
+                title="Scrambled — Polder Animation (VK Видео)"
+                allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
+        </div>
+        <p style="text-align:center; color:#8a9aaa; font-size:0.85rem; margin-bottom:0.5rem;">
+            Если плеер не загрузился, используйте ссылки ниже.
+        </p>
+        <div class="film-links">
+            <a href="https://vkvideo.ru/video-119098218_456239079" target="_blank" rel="noopener">Открыть в VK Видео</a>
+            <a href="https://vimeo.com/298947269?fl=pl&fe=cm" target="_blank" rel="noopener" class="secondary">Найти на YouTube</a>
+        </div>
+        <p style="color:#7a8a9a; font-size:0.85rem; text-align:center; margin-top:0.8rem;">
+            «Scrambled» © Polder Animation. Встроенный плеер использует публикацию на VK Видео.
+        </p>
+
+        <h3>Что хочет донести автор</h3>
+        <div class="author-block">
+            <p>
+                <strong>Не «аналог против цифры», а ценность обоих миров.</strong>
+                Хотя на поверхности «Scrambled» можно прочитать как ностальгию по тактильным головоломкам
+                прошлого, режиссёр и рецензенты подчёркивают более тонкую мысль: навыки, полученные
+                от кубика Рубика и от мобильных игр, <em>одинаково ценны</em>. Фильм не призывает
+                выбросить смартфон — он показывает, что простое осязаемое занятие может дать мозгу
+                передышку и свежий взгляд на ситуацию.
+            </p>
+            <p>
+                <strong>Ценность перерыва и «перезагрузки».</strong>
+                Для Эсры решение головоломки становится способом успокоиться после пропущенного поезда.
+                Автор хочет напомнить: иногда полезно оторваться от экрана и переключиться на что-то
+                простое, чтобы взглянуть на свои проблемы иначе.
+            </p>
+        </div>
+    </section>
+
+    <!-- === КУБИК === -->
+    <section class="game-section">
+        <h2>🧩 Отвлекись! Собери Кубик Рубика</h2>
+        <p class="subtitle">
+            Кнопки поворачивают слои с плавной инерцией. <b>U</b> — по часовой, <b>U'</b> — против.
+            «Собрать» проигрывает обратную последовательность в ускоренном темпе.
+        </p>
+
+        <div class="scene" id="scene">
+            <div id="orbit"></div>
+        </div>
+
+        <div class="controls" id="moveControls"></div>
+        <div class="controls">
+            <button class="action" id="scrambleBtn">🔀 Перемешать</button>
+            <button class="solve" id="solveBtn">✨ Собрать</button>
+            <button class="action" id="resetBtn">🔄 Сброс</button>
+        </div>
+
+        <div class="status" id="status"></div>
+        <p class="hint">Кубик можно крутить мышью. «Собрать» работает для последовательности, созданной кнопкой «Перемешать».</p>
+    </section>
+
+</div>
+
+<footer>
+    <p>Сайт создан в учебных целях. «Scrambled» © Polder Animation / Bastiaan Schravendeel.</p>
+</footer>
+
+<script>
+/* ============================================================
+   МОДЕЛЬ КУБИКА 3×3
+   ============================================================ */
+const COLORS = { U:'c-U', D:'c-D', F:'c-F', B:'c-B', R:'c-R', L:'c-L' };
+
+function createSolvedCube() {
+    const cubies = [];
+    for (let x = -1; x <= 1; x++) {
+        for (let y = -1; y <= 1; y++) {
+            for (let z = -1; z <= 1; z++) {
+                if (x === 0 && y === 0 && z === 0) continue;
+                const colors = {};
+                if (y ===  1) colors.U = 'U';
+                if (y === -1) colors.D = 'D';
+                if (z ===  1) colors.F = 'F';
+                if (z === -1) colors.B = 'B';
+                if (x ===  1) colors.R = 'R';
+                if (x === -1) colors.L = 'L';
+                cubies.push({ x, y, z, colors });
+            }
+        }
+    }
+    return cubies;
+}
+
+function rotateLayer(cubies, axis, layer, dir) {
+    const angle = dir * Math.PI / 2;
+    const cos = Math.round(Math.cos(angle));
+    const sin = Math.round(Math.sin(angle));
+
+    for (const c of cubies) {
+        if (c[axis] !== layer) continue;
+        let { x, y, z } = c;
+        let nx = x, ny = y, nz = z;
+        if (axis === 'x') {
+            ny = y * cos - z * sin;
+            nz = y * sin + z * cos;
+        } else if (axis === 'y') {
+            nz = z * cos - x * sin;
+            nx = z * sin + x * cos;
+        } else {
+            nx = x * cos - y * sin;
+            ny = x * sin + y * cos;
+        }
+        c.x = Math.round(nx); c.y = Math.round(ny); c.z = Math.round(nz);
+
+        const newColors = {};
+        for (const [face, color] of Object.entries(c.colors)) {
+            let nxF = 0, nyF = 0, nzF = 0;
+            if (face === 'U') nyF = 1;
+            else if (face === 'D') nyF = -1;
+            else if (face === 'F') nzF = 1;
+            else if (face === 'B') nzF = -1;
+            else if (face === 'R') nxF = 1;
+            else if (face === 'L') nxF = -1;
+
+            let rx = nxF, ry = nyF, rz = nzF;
+            if (axis === 'x') {
+                const ty = ry * cos - rz * sin;
+                const tz = ry * sin + rz * cos;
+                ry = ty; rz = tz;
+            } else if (axis === 'y') {
+                const tz = rz * cos - rx * sin;
+                const tx = rz * sin + rx * cos;
+                rz = tz; rx = tx;
+            } else {
+                const tx = rx * cos - ry * sin;
+                const ty = rx * sin + ry * cos;
+                rx = tx; ry = ty;
+            }
+            rx = Math.round(rx); ry = Math.round(ry); rz = Math.round(rz);
+
+            let newFace;
+            if (ry ===  1) newFace = 'U';
+            else if (ry === -1) newFace = 'D';
+            else if (rz ===  1) newFace = 'F';
+            else if (rz === -1) newFace = 'B';
+            else if (rx ===  1) newFace = 'R';
+            else if (rx === -1) newFace = 'L';
+            if (newFace) newColors[newFace] = color;
+        }
+        c.colors = newColors;
+    }
+}
+
+const MOVES = {
+    'U':  { axis:'y', layer: 1, dir: -1 },
+    "U'": { axis:'y', layer: 1, dir:  1 },
+    'D':  { axis:'y', layer:-1, dir:  1 },
+    "D'": { axis:'y', layer:-1, dir: -1 },
+    'F':  { axis:'z', layer: 1, dir: -1 },
+    "F'": { axis:'z', layer: 1, dir:  1 },
+    'B':  { axis:'z', layer:-1, dir:  1 },
+    "B'": { axis:'z', layer:-1, dir: -1 },
+    'R':  { axis:'x', layer: 1, dir: -1 },
+    "R'": { axis:'x', layer: 1, dir:  1 },
+    'L':  { axis:'x', layer:-1, dir:  1 },
+    "L'": { axis:'x', layer:-1, dir: -1 },
+};
+
+function inverseMove(m) {
+    if (m.endsWith("'")) return m.slice(0, -1);
+    return m + "'";
+}
+
+/* ============================================================
+   ОТРИСОВКА И 3D
+   ============================================================ */
+const orbit = document.getElementById('orbit');
+const CUBIE_SIZE = 60;
+const GAP = 2;
+const STEP = CUBIE_SIZE + GAP;
+
+function cubiePosition(x, y, z) {
+    return { tx: x * STEP, ty: -y * STEP, tz: z * STEP };
+}
+
+function buildScene() {
+    orbit.innerHTML = '';
+    for (let x = -1; x <= 1; x++) {
+        for (let y = -1; y <= 1; y++) {
+            for (let z = -1; z <= 1; z++) {
+                if (x === 0 && y === 0 && z === 0) continue;
+                const cubie = document.createElement('div');
+                cubie.className = 'cubie';
+                cubie.dataset.x = x; cubie.dataset.y = y; cubie.dataset.z = z;
+                const { tx, ty, tz } = cubiePosition(x, y, z);
+                cubie.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px)`;
+                orbit.appendChild(cubie);
+            }
+        }
+    }
+}
+
+function paintCubies(cubies) {
+    const map = new Map();
+    for (const c of cubies) map.set(`${c.x},${c.y},${c.z}`, c);
+    orbit.querySelectorAll('.cubie').forEach(el => {
+        const x = +el.dataset.x, y = +el.dataset.y, z = +el.dataset.z;
+        const model = map.get(`${x},${y},${z}`);
+        el.innerHTML = '';
+        if (!model) return;
+        for (const [face, color] of Object.entries(model.colors)) {
+            const s = document.createElement('div');
+            s.className = `sticker ${face} ${COLORS[color]}`;
+            el.appendChild(s);
+        }
+    });
+}
+
+function syncDomToModel(cubies) {
+    orbit.querySelectorAll('.cubie').forEach(el => {
+        const x = +el.dataset.x, y = +el.dataset.y, z = +el.dataset.z;
+        const { tx, ty, tz } = cubiePosition(x, y, z);
+        el.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px)`;
+    });
+    paintCubies(cubies);
+}
+
+/* ============================================================
+   УЛУЧШЕННАЯ АНИМАЦИЯ
+   ============================================================ */
+let animating = false;
+let speedMultiplier = 1; // Ускорение при массовой сборке
+
+function animateMove(move) {
+    return new Promise(resolve => {
+        const m = MOVES[move];
+        if (!m) { resolve(); return; }
+
+        const inLayer = [];
+        orbit.querySelectorAll('.cubie').forEach(el => {
+            if (+el.dataset[m.axis] === m.layer) inLayer.push(el);
+        });
+
+        // Создаем контейнер для вращения
+        const group = document.createElement('div');
+        group.id = 'turn-group';
+        orbit.appendChild(group);
+        
+        // Переносим кубики в контейнер
+        inLayer.forEach(el => {
+            group.appendChild(el);
+        });
+
+        // Высчитываем угол и ось
+        let deg = 90 * m.dir;
+        const axisName = m.axis === 'x' ? 'X' : m.axis === 'y' ? 'Y' : 'Z';
+        if (m.axis === 'x') deg = -90 * m.dir;
+        if (m.axis === 'z') deg = 90 * m.dir;
+        if (m.axis === 'y') deg = -90 * m.dir;
+
+        // Настраиваем анимацию (длительность зависит от множителя)
+        const duration = 0.35 * speedMultiplier;
+        group.style.transition = `transform ${duration}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
+        
+        // Принудительный рефлоу, чтобы анимация началась с нуля
+        void group.offsetWidth;
+        group.style.transform = `rotate${axisName}(${deg}deg)`;
+
+        // Ждем окончания анимации
+        setTimeout(() => {
+            // 1. Обновляем математическую модель
+            rotateLayer(state, m.axis, m.layer, m.dir);
+            
+            // 2. Мгновенно сбрасываем трансформацию контейнера
+            group.style.transition = 'none';
+            group.style.transform = '';
+
+            // 3. Переносим кубики обратно и обновляем их координаты в DOM
+            const cubiesInGroup = Array.from(group.children);
+            cubiesInGroup.forEach(el => {
+                const oldX = +el.dataset.x, oldY = +el.dataset.y, oldZ = +el.dataset.z;
+                let nx = oldX, ny = oldY, nz = oldZ;
+                const angle = m.dir * Math.PI / 2;
+                const cos = Math.round(Math.cos(angle));
+                const sin = Math.round(Math.sin(angle));
+                
+                if (m.axis === 'x') {
+                    ny = oldY * cos - oldZ * sin;
+                    nz = oldY * sin + oldZ * cos;
+                } else if (m.axis === 'y') {
+                    nz = oldZ * cos - oldX * sin;
+                    nx = oldZ * sin + oldX * cos;
+                } else {
+                    nx = oldX * cos - oldY * sin;
+                    ny = oldX * sin + oldY * cos;
+                }
+                
+                el.dataset.x = Math.round(nx);
+                el.dataset.y = Math.round(ny);
+                el.dataset.z = Math.round(nz);
+                orbit.appendChild(el);
+            });
+            group.remove();
+
+            // 4. Перекрашиваем наклейки
+            paintCubies(state);
+            
+            // 5. Фиксируем позиции (без анимации)
+            orbit.querySelectorAll('.cubie').forEach(el => {
+                const x = +el.dataset.x, y = +el.dataset.y, z = +el.dataset.z;
+                const { tx, ty, tz } = cubiePosition(x, y, z);
+                el.style.transform = `translate3d(${tx}px, ${ty}px, ${tz}px)`;
+            });
+
+            resolve();
+        }, duration * 1000);
+    });
+}
+
+/* ============================================================
+   УПРАВЛЕНИЕ СОСТОЯНИЕМ
+   ============================================================ */
+let state = createSolvedCube();
+let scrambleHistory = [];
+let queue = [];
+
+function setBusy(b) {
+    animating = b;
+    document.querySelectorAll('#moveControls button, #scrambleBtn, #solveBtn, #resetBtn')
+        .forEach(btn => btn.disabled = b);
+}
+
+async function processQueue() {
+    if (animating) return;
+    if (queue.length === 0) return;
+    
+    // Если в очереди много ходов, ускоряем их
+    speedMultiplier = queue.length > 5 ? 0.5 : 1;
+    
+    setBusy(true);
+    while (queue.length > 0) {
+        const mv = queue.shift();
+        // Динамически обновляем скорость
+        speedMultiplier = queue.length > 5 ? 0.4 : (queue.length > 2 ? 0.6 : 1);
+        await animateMove(mv);
+    }
+    setBusy(false);
+    checkSolved();
+}
+
+function enqueue(move) {
+    queue.push(move);
+    processQueue();
+}
+
+function isSolved(cubies) {
+    const facePos = {
+        U: (i,j)=>({x:j-1,y:1,z:1-i}),
+        D: (i,j)=>({x:j-1,y:-1,z:i-1}),
+        F: (i,j)=>({x:j-1,y:1-i,z:1}),
+        B: (i,j)=>({x:1-j,y:1-i,z:-1}),
+        R: (i,j)=>({x:1,y:1-i,z:1-j}),
+        L: (i,j)=>({x:-1,y:1-i,z:j-1}),
+    };
+    const map = new Map();
+    for (const c of cubies) map.set(`${c.x},${c.y},${c.z}`, c);
+    for (const face of Object.keys(facePos)) {
+        const colors = new Set();
+        for (let i=0;i<3;i++) for (let j=0;j<3;j++) {
+            const {x,y,z} = facePos[face](i,j);
+            const c = map.get(`${x},${y},${z}`);
+            if (c && c.colors[face]) colors.add(c.colors[face]);
+        }
+        if (colors.size !== 1) return false;
+    }
+    return true;
+}
+
+function checkSolved() {
+    const status = document.getElementById('status');
+    if (isSolved(state)) {
+        status.textContent = '✅ Кубик собран!';
+        status.classList.remove('warn');
+    } else {
+        status.textContent = 'Кубик перемешан — нажмите «Собрать» или крутите сами.';
+        status.classList.add('warn');
+    }
+}
+
+/* ============================================================
+   КНОПКИ
+   ============================================================ */
+const moveControls = document.getElementById('moveControls');
+['U',"U'",'D',"D'",'F',"F'",'B',"B'",'R',"R'",'L',"L'"].forEach(move => {
+    const btn = document.createElement('button');
+    btn.textContent = move;
+    btn.addEventListener('click', () => {
+        if (animating) return;
+        enqueue(move);
+    });
+    moveControls.appendChild(btn);
+});
+
+document.getElementById('scrambleBtn').addEventListener('click', () => {
+    if (animating) return;
+    const moves = Object.keys(MOVES);
+    scrambleHistory = [];
+    for (let i = 0; i < 20; i++) {
+        scrambleHistory.push(moves[Math.floor(Math.random() * moves.length)]);
+    }
+    scrambleHistory.forEach(mv => enqueue(mv));
+    document.getElementById('status').textContent = 'Перемешиваем...';
+});
+
+document.getElementById('solveBtn').addEventListener('click', () => {
+    if (animating) return;
+    if (scrambleHistory.length === 0) {
+        document.getElementById('status').textContent = 'Сначала нажмите «Перемешать».';
+        document.getElementById('status').classList.add('warn');
+        return;
+    }
+    const solution = scrambleHistory.slice().reverse().map(inverseMove);
+    document.getElementById('status').textContent = 'Собираем...';
+    solution.forEach(mv => enqueue(mv));
+    scrambleHistory = [];
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+    if (animating) return;
+    state = createSolvedCube();
+    scrambleHistory = [];
+    syncDomToModel(state);
+    checkSolved();
+});
+
+/* ============================================================
+   ОРБИТА (ВРАЩЕНИЕ МЫШЬЮ)
+   ============================================================ */
+(function setupOrbit() {
+    const scene = document.getElementById('scene');
+    let dragging = false, px = 0, py = 0;
+    let rotX = -25, rotY = -35;
+
+    function setOrbit() {
+        orbit.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    }
+
+    scene.addEventListener('mousedown', e => {
+        dragging = true; px = e.clientX; py = e.clientY;
+        scene.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        rotY += (e.clientX - px) * 0.5;
+        rotX -= (e.clientY - py) * 0.5;
+        px = e.clientX; py = e.clientY;
+        setOrbit();
+    });
+    window.addEventListener('mouseup', () => {
+        dragging = false;
+        scene.style.cursor = 'grab';
+    });
+    scene.addEventListener('touchstart', e => {
+        dragging = true;
+        px = e.touches[0].clientX; py = e.touches[0].clientY;
+    }, {passive:true});
+    window.addEventListener('touchmove', e => {
+        if (!dragging) return;
+        rotY += (e.touches[0].clientX - px) * 0.5;
+        rotX -= (e.touches[0].clientY - py) * 0.5;
+        px = e.touches[0].clientX; py = e.touches[0].clientY;
+        setOrbit();
+    }, {passive:true});
+    window.addEventListener('touchend', () => { dragging = false; });
+
+    setOrbit();
+})();
+
+/* ============================================================
+   СТАРТ
+   ============================================================ */
+buildScene();
+syncDomToModel(state);
+checkSolved();
+</script>
+</body>
+</html>
